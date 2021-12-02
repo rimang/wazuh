@@ -220,6 +220,11 @@ namespace FIMDBHelper
 
         return query;
     }
+
+    template<typename T>
+    void startDBSyncTxn() {
+        auto T::getInstance().
+    }
 }
 
 #endif //_FIMDBHELPER_H

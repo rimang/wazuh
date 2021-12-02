@@ -23,6 +23,10 @@ extern "C"
 #include "logging_helper.h"
 }
 #endif
+constexpr auto QUEUE_SIZE
+{
+    4096
+};
 
 constexpr auto CREATE_FILE_DB_STATEMENT
 {
@@ -306,6 +310,7 @@ class FIMDB
             m_stopping = true;
         };
 
+        DBSyncTxn startTxn(const std::string& table);
 
     private:
 
