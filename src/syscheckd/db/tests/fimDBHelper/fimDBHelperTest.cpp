@@ -132,7 +132,7 @@ TEST_F(FIMHelperTest, executeGetCountSuccess)
     std::string tableName;
     int count = 0;
     EXPECT_CALL(FIMDBMOCK::getInstance(), executeQuery(testing::_, testing::_)).WillOnce(testing::Return(static_cast<int>(dbQueryResult::SUCCESS)));
-    int returnCode = FIMDBHelper::getCount<FIMDBMOCK>(tableName, count);
+    int returnCode = FIMDBHelper::getCount<FIMDBMOCK>(tableName, count, nullptr);
     ASSERT_EQ(returnCode, FIMDB_OK);
 }
 
@@ -141,7 +141,7 @@ TEST_F(FIMHelperTest, executeGetCountWithMaxRows)
     std::string tableName;
     int count = 0;
     EXPECT_CALL(FIMDBMOCK::getInstance(), executeQuery(testing::_, testing::_)).WillOnce(testing::Return(static_cast<int>(dbQueryResult::MAX_ROWS_ERROR)));
-    int returnCode = FIMDBHelper::getCount<FIMDBMOCK>(tableName, count);
+    int returnCode = FIMDBHelper::getCount<FIMDBMOCK>(tableName, count, nullptr);
     ASSERT_EQ(returnCode, FIMDB_FULL);
 }
 
@@ -150,6 +150,6 @@ TEST_F(FIMHelperTest, executeGetCountWithSomeDbSyncError)
     std::string tableName;
     int count = 0;
     EXPECT_CALL(FIMDBMOCK::getInstance(), executeQuery(testing::_, testing::_)).WillOnce(testing::Return(static_cast<int>(dbQueryResult::DBSYNC_ERROR)));
-    int returnCode = FIMDBHelper::getCount<FIMDBMOCK>(tableName, count);
+    int returnCode = FIMDBHelper::getCount<FIMDBMOCK>(tableName, count, nullptr);
     ASSERT_EQ(returnCode, FIMDB_ERR);
 }

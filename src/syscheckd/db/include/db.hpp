@@ -20,7 +20,6 @@ extern "C" {
 #include "syscheck.h"
 #include "external/sqlite/sqlite3.h"
 #include "config/syscheck-config.h"
-#include "dbFileItem.hpp"
 #ifdef WIN32
 #include "registry/registry.h"
 #endif
@@ -50,6 +49,7 @@ extern "C" {
 #define FIMDB_RM_DEFAULT_TIME 100 //miliseconds
 
 #define FIMBD_FILE_TABLE_NAME "file_entry"
+#define FILE_PRIMARY_KEY "path"
 
 #define FIM_LAST_ROW 0
 #define FIM_FIRST_ROW 1
@@ -460,23 +460,21 @@ int fim_db_get_multiple_path(fdb_t* fim_sql, int index, FILE* fd);
 /**
  * @brief Get entry data using path.
  *
- * @param fim_sql FIM database struct.
  * @param file_path File path.
  *
  * @return FIM entry struct on success, NULL on error.
  */
-fim_entry* fim_db_get_path(fdb_t* fim_sql, const char* file_path);
+fim_entry* fim_db_get_path(const char* file_path);
 
 /**
  * @brief Get all the paths asociated to an inode
  *
- * @param fim_sql FIM databse struct.
  * @param inode Inode.
  * @param dev Device.
  *
  * @return char** An array of the paths asociated to the inode.
  */
-char** fim_db_get_paths_from_inode(fdb_t* fim_sql, unsigned long int inode, unsigned long int dev);
+char** fim_db_get_paths_from_inode(unsigned long int inode, unsigned long int dev);
 
 /**
  * @brief Delete entry from the DB using file path.
@@ -486,36 +484,6 @@ char** fim_db_get_paths_from_inode(fdb_t* fim_sql, unsigned long int inode, unsi
  * @return FIMDB_OK on success, FIMDB_ERR otherwise.
  */
 int fim_db_remove_path(const char* path);
-
-/**
- * @brief Set all entries from database to unscanned.
- *
- * @return FIMDB_OK on success, FIMDB_ERR otherwise.
- */
-int fim_db_set_all_unscanned();
-
-/**
- * @brief Get all the unscanned files by saving them in a temporal storage.
- *
- * @param fim_sql FIM database struct.
- * @param file Structure of the file which contains all the paths.
- * @param storage 1 Store database in memory, disk otherwise.
- *
- * @return FIMDB_OK on success, FIMDB_ERR otherwise.
- */
-int fim_db_get_not_scanned(fdb_t* fim_sql, fim_tmp_file** file, int storage);
-
-/**
- * @brief Delete not scanned entries from database.
- *
- * @param fim_sql FIM database struct.
- * @param file Structure of the file which contains all the paths.
- * @param mutex FIM database's mutex for thread synchronization.
- * @param storage 1 Store database in memory, disk otherwise.
- *
- * @return FIMDB_OK on success, FIMDB_ERR otherwise.
- */
-int fim_db_delete_not_scanned(fdb_t* fim_sql, fim_tmp_file* file, pthread_mutex_t* mutex, int storage);
 
 /**
  * @brief Removes a range of paths from the database.
@@ -578,30 +546,24 @@ int fim_db_remove_wildcard_entry(fdb_t* fim_sql,
 /**
  * @brief Get count of all inodes in file_entry table.
  *
- * @param fim_sql FIM database struct.
- *
  * @return Number of inodes in file_entry table.
  */
-int fim_db_get_count_file_inode(fdb_t* fim_sql);
+int fim_db_get_count_file_inode();
 
 /**
  * @brief Get count of all entries in file_entry table.
  *
- * @param fim_sql FIM database struct.
- *
  * @return Number of entries in file_entry table.
  */
-int fim_db_get_count_file_entry(fdb_t* fim_sql);
+int fim_db_get_count_file_entry();
 
 /**
  * @brief Get path list using the sqlite LIKE operator using @pattern. (stored in @file).
- * @param fim_sql FIM database struct.
  * @param pattern Pattern that will be used for the LIKE operation.
- * @param file Structure of the storage which contains all the paths.
  * @param storage 1 Store database in memory, disk otherwise.
  * @return FIMDB_OK on success, FIMDB_ERR otherwise.
  */
-int fim_db_get_path_from_pattern(fdb_t* fim_sql, const char* pattern, fim_tmp_file** file, int storage);
+int fim_db_get_path_from_pattern(const char* pattern, int storage);
 
 /**
  * @brief Makes any necessary queries to get the entry updated in the DB.

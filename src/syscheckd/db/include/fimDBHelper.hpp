@@ -107,22 +107,31 @@ namespace FIMDBHelper
     *
     * @param tableName a string with the table name
     * @param count a int with count values
+    * @param query a json to modify the query
     *
     * @return amount of entries on success, 0 otherwise.
     */
     template<typename T>
-    int getCount(const std::string & tableName, int & count)
+    int getCount(const std::string & tableName, int & count, const nlohmann::json & query)
     {
-        const auto countQueryStatement = R"({
-                                                "table":"",
-                                                "query":{"column_list":["count(*) AS count"],
-                                                "row_filter":"",
-                                                "distinct_opt":false,
-                                                "order_by_opt":"",
-                                                "count_opt":100}
-        })";
-        auto countQuery = nlohmann::json::parse(countQueryStatement);
-        countQuery["table"] = tableName;
+        nlohmann::json countQuery;
+        if (!query.empty())
+        {
+            countQuery = query;
+        }
+        else
+        {
+            const auto countQueryStatement = R"({
+                                                    "table":"",
+                                                    "query":{"column_list":["count(*) AS count"],
+                                                    "row_filter":"",
+                                                    "distinct_opt":false,
+                                                    "order_by_opt":"",
+                                                    "count_opt":100}
+            })";
+            countQuery = nlohmann::json::parse(countQueryStatement);
+            countQuery["table"] = tableName;
+        }
         auto callback {
             [&count](ReturnTypeCallback type, const nlohmann::json & jsonResult)
             {
@@ -226,6 +235,30 @@ namespace FIMDBHelper
         };
 
         return queryError(T::getInstance().executeQuery(query, callback));
+    }
+
+    /**
+    * @brief Create a new query to database
+    *
+    * @param tableName a string with table name
+    * @param columnList an array with the column list
+    * @param filter a string with a filter to a table
+    * @param order a string with the column to order in result
+    *
+    * @return a nlohmann::json with a database query
+    */
+    nlohmann::json dbQuery(const std::string & tableName, const nlohmann::json & columnList, const std::string & filter,
+                           const std::string & order)
+    {
+        nlohmann::json query;
+        query["table"] = tableName;
+        query["query"]["column_list"] = columnList["column_list"];
+        query["query"]["row_filter"] = filter;
+        query["query"]["distinct_opt"] = false;
+        query["query"]["order_by_opt"] = order;
+        query["query"]["count_opt"] = 100;
+
+        return query;
     }
 }
 

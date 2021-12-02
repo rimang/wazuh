@@ -345,7 +345,7 @@ fim_entry* fim_db_get_entry_from_sync_msg(fdb_t* fim_sql,
                                           __attribute__((unused)) fim_type type,
                                           const char* path)
 {
-    return fim_db_get_path(fim_sql, path);
+    return fim_db_get_path(path);
 }
 // LCOV_EXCL_STOP
 #else
@@ -771,12 +771,12 @@ int fim_db_process_read_file(fdb_t* fim_sql,
         fim_entry* entry = NULL;
 
 #ifndef WIN32
-        entry = fim_db_get_path(fim_sql, read_line);
+        entry = fim_db_get_path(read_line);
 #else
 
         if (type == FIM_TYPE_FILE)
         {
-            entry = fim_db_get_path(fim_sql, read_line);
+            entry = fim_db_get_path(read_line);
         }
         else
         {
@@ -1218,7 +1218,7 @@ int fim_db_read_line_from_file(fim_tmp_file* file, int storage, int it, char** b
 // LCOV_EXCL_START
 int fim_db_get_count_entries(fdb_t* fim_sql)
 {
-    return fim_db_get_count_file_entry(fim_sql);
+    return fim_db_get_count_file_entry();
 }
 // LCOV_EXCL_STOP
 #else

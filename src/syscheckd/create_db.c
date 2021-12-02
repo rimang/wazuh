@@ -53,8 +53,7 @@ static const char *FIM_EVENT_MODE[] = {
 void update_wildcards_config();
 
 
-void fim_generate_delete_event(fdb_t *fim_sql,
-                               fim_entry *entry,
+void fim_generate_delete_event(fim_entry *entry,
                                pthread_mutex_t *mutex,
                                void *_evt_data,
                                void *configuration,
@@ -68,11 +67,12 @@ void fim_generate_delete_event(fdb_t *fim_sql,
     }
 
     // Remove path from the DB.
-    w_mutex_lock(mutex);
+    fim_db_remove_path(entry->file_entry.path);
+    /*w_mutex_lock(mutex);
     if (fim_db_remove_path(entry->file_entry.path) == FIMDB_ERR) {
         w_mutex_unlock(mutex);
         return;
-    }
+    }*/
 
     if (evt_data->report_event) {
         json_event = fim_json_event(entry, NULL, original_configuration, evt_data, NULL);
@@ -86,8 +86,7 @@ void fim_generate_delete_event(fdb_t *fim_sql,
     cJSON_Delete(json_event);
 }
 
-void fim_delete_file_event(fdb_t *fim_sql,
-                           fim_entry *entry,
+void fim_delete_file_event(fim_entry *entry,
                            pthread_mutex_t *mutex,
                            void *_evt_data,
                            __attribute__((unused)) void *_unused_field_1,
@@ -120,7 +119,7 @@ void fim_delete_file_event(fdb_t *fim_sql,
         break;
     }
 
-    fim_generate_delete_event(fim_sql, entry, mutex, evt_data, configuration, NULL);
+    fim_generate_delete_event(entry, mutex, evt_data, configuration, NULL);
 }
 
 
@@ -294,11 +293,11 @@ void fim_checker(const char *path, event_data_t *evt_data, const directory_t *pa
             return;
         }
 
-        saved_entry = fim_db_get_path(syscheck.database, path);
+        saved_entry = fim_db_get_path(path);
 
         if (saved_entry) {
             evt_data->type = FIM_DELETE;
-            fim_delete_file_event(syscheck.database, saved_entry, &syscheck.fim_entry_mutex, evt_data, NULL, NULL);
+            fim_delete_file_event(saved_entry, &syscheck.fim_entry_mutex, evt_data, NULL, NULL);
             free_entry(saved_entry);
             saved_entry = NULL;
         } else if (configuration->options & CHECK_SEECHANGES) {
@@ -515,7 +514,7 @@ void fim_whodata_event(whodata_evt * w_evt) {
         const unsigned long int inode = strtoul(w_evt->inode, NULL, 10);
         const unsigned long int dev = strtoul(w_evt->dev, NULL, 10);
 
-        paths = fim_db_get_paths_from_inode(syscheck.database, inode, dev);
+        paths = fim_db_get_paths_from_inode(inode, dev);
 
         if(paths) {
             for(int i = 0; paths[i]; i++) {
@@ -534,10 +533,10 @@ void fim_process_wildcard_removed(directory_t *configuration) {
     fim_tmp_file *files = NULL;
     event_data_t evt_data = { .mode = FIM_SCHEDULED, .w_evt = NULL, .report_event = true, .type = FIM_DELETE };
 
-    fim_entry *entry = fim_db_get_path(syscheck.database, configuration->path);
+    fim_entry *entry = fim_db_get_path(configuration->path);
 
     if (entry != NULL) {
-        fim_generate_delete_event(syscheck.database, entry, &syscheck.fim_entry_mutex, &evt_data, configuration, NULL);
+        fim_generate_delete_event(entry, &syscheck.fim_entry_mutex, &evt_data, configuration, NULL);
         free_entry(entry);
         return;
     }
@@ -548,22 +547,17 @@ void fim_process_wildcard_removed(directory_t *configuration) {
     // Create the sqlite LIKE pattern -> "pathname/%"
     snprintf(pattern, PATH_MAX, "%s%c%%", configuration->path, PATH_SEP);
 
-    fim_db_get_path_from_pattern(syscheck.database, pattern, &files, syscheck.database_store);
-
-    if (files && files->elements) {
-        if (fim_db_remove_wildcard_entry(syscheck.database, files, &syscheck.fim_entry_mutex, syscheck.database_store,
-                                         &evt_data, configuration) != FIMDB_OK) {
-            merror(FIM_DB_ERROR_RM_PATTERN, pattern);
-        }
-    }
+    fim_db_remove_wildcard_entry(syscheck.database, files, &syscheck.fim_entry_mutex, syscheck.database_store,
+                                 &evt_data, configuration);
 }
 
 void fim_process_missing_entry(char * pathname, fim_event_mode mode, whodata_evt * w_evt) {
     fim_entry *saved_data = NULL;
     fim_tmp_file *files = NULL;
+    event_data_t evt_data;
 
     // Search path in DB.
-    saved_data = fim_db_get_path(syscheck.database, pathname);
+    saved_data = fim_db_get_path(pathname);
 
     // Exists, create event.
     if (saved_data) {
@@ -579,15 +573,8 @@ void fim_process_missing_entry(char * pathname, fim_event_mode mode, whodata_evt
     // Create the sqlite LIKE pattern -> "pathname/%"
     snprintf(pattern, PATH_MAX, "%s%c%%", pathname, PATH_SEP);
 
-    fim_db_get_path_from_pattern(syscheck.database, pattern, &files, syscheck.database_store);
-
-    if (files && files->elements) {
-        event_data_t evt_data = { .mode = mode, .w_evt = w_evt, .report_event = true, .type = FIM_DELETE };
-        if (fim_db_process_missing_entry(syscheck.database, files, &syscheck.fim_entry_mutex, syscheck.database_store,
-                                         &evt_data) != FIMDB_OK) {
-            merror(FIM_DB_ERROR_RM_PATTERN, pattern);
-        }
-    }
+    fim_db_process_missing_entry(syscheck.database, files, &syscheck.fim_entry_mutex, syscheck.database_store,
+                                 &evt_data);
 }
 
 // Checks the DB state, sends a message alert if necessary
@@ -920,20 +907,6 @@ void fim_get_checksum (fim_file_data * data) {
 
     OS_SHA1_Str(checksum, -1, data->checksum);
     free(checksum);
-}
-
-void check_deleted_files() {
-    fim_tmp_file *file = NULL;
-
-    if (fim_db_get_not_scanned(syscheck.database, &file, syscheck.database_store) != FIMDB_OK) {
-        merror(FIM_DB_ERROR_RM_NOT_SCANNED);
-    }
-
-    if (file && file->elements) {
-        w_rwlock_rdlock(&syscheck.directories_lock);
-        fim_db_delete_not_scanned(syscheck.database, file, &syscheck.fim_entry_mutex, syscheck.database_store);
-        w_rwlock_unlock(&syscheck.directories_lock);
-    }
 }
 
 cJSON *fim_json_event(const fim_entry *new_data,
@@ -1365,8 +1338,8 @@ void fim_print_info(struct timespec start, struct timespec end, clock_t cputime_
     unsigned inode_items = 0;
     unsigned inode_paths = 0;
 
-    inode_items = fim_db_get_count_file_inode(syscheck.database);
-    inode_paths = fim_db_get_count_file_entry(syscheck.database);
+    inode_items = fim_db_get_count_file_inode();
+    inode_paths = fim_db_get_count_file_entry();
 
     mdebug1(FIM_INODES_INFO, inode_items, inode_paths);
 #endif

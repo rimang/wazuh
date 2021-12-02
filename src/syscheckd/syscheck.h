@@ -955,8 +955,7 @@ char *fim_get_real_path(const directory_t *dir);
  * @param _unused_field_2 Unused field, required to use this function as a callback.
  *
  */
-void fim_delete_file_event(fdb_t *fim_sql,
-                           fim_entry *entry,
+void fim_delete_file_event(fim_entry *entry,
                            pthread_mutex_t *mutex,
                            void *_evt_data,
                            void *_unused_field_1,
@@ -973,8 +972,7 @@ void fim_delete_file_event(fdb_t *fim_sql,
  * @param _unused_field Unused field, required to use this function as a callback.
  *
  */
-void fim_generate_delete_event(fdb_t *fim_sql,
-                               fim_entry *entry,
+void fim_generate_delete_event(fim_entry *entry,
                                pthread_mutex_t *mutex,
                                void *evt_data,
                                void *configuration,

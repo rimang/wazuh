@@ -792,16 +792,8 @@ STATIC void fim_link_delete_range(directory_t *configuration) {
     // Create the sqlite LIKE pattern.
     snprintf(pattern, PATH_MAX, "%s%c%%", configuration->symbolic_links, PATH_SEP);
 
-    if (fim_db_get_path_from_pattern(syscheck.database, pattern, &file, syscheck.database_store) != FIMDB_OK) {
-        merror(FIM_DB_ERROR_RM_PATTERN, pattern);
-    }
-
-    if (file && file->elements) {
-        if (fim_db_delete_range(syscheck.database, file, &syscheck.fim_entry_mutex, syscheck.database_store,
-                                &evt_data, configuration) != FIMDB_OK) {
-            merror(FIM_DB_ERROR_RM_PATTERN, pattern);
-        }
-    }
+    fim_db_delete_range(syscheck.database, file, &syscheck.fim_entry_mutex, syscheck.database_store,
+                        &evt_data, configuration);
 }
 
 STATIC void fim_link_silent_scan(const char *path, directory_t *configuration) {
