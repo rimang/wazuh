@@ -12,19 +12,36 @@
 #include "sharedDefs.h"
 #include "packageLinuxParserHelper.h"
 #include "berkeleyRpmDbHelper.h"
+#include "filesystemHelper.h"
+#include "rpm.h"
 
 
 void getRpmInfo(std::function<void(nlohmann::json&)> callback)
 {
-    BerkeleyRpmDBReader db {std::make_shared<BerkeleyDbWrapper>(RPM_DATABASE)};
-
-    for (std::string row{db.getNext()}; !row.empty() ; row = db.getNext())
-    {
-        auto package = PackageLinuxHelper::parseRpm(row);
-
-        if (!package.empty())
+    if (!Utils::existsRegular(RPM_DATABASE)) {
+        // We are probably using RPM >= 1.17 – get the packages from librpm.
+        RPM rpm;
+        auto packages = rpm.packages();
+        for (const auto &p : packages)
         {
-            callback(package);
+           auto packageJson = PackageLinuxHelper::parseRpm(p);
+            if (!packageJson.empty())
+            {
+                callback(packageJson);
+            }
+        }
+    } else {
+        BerkeleyRpmDBReader db {std::make_shared<BerkeleyDbWrapper>(RPM_DATABASE)};
+        auto row = db.getNext();
+        // Get the packages from the Berkeley DB.
+        while (!row.empty())
+        {
+            auto package = PackageLinuxHelper::parseRpm(row);
+            if (!package.empty())
+            {
+                callback(package);
+            }
+            row = db.getNext();
         }
     }
 }

@@ -32,6 +32,11 @@ namespace Utils
         struct stat info {};
         return !stat(path.c_str(), &info) && (info.st_mode & S_IFDIR);
     }
+    static bool existsRegular(const std::string& path)
+    {
+        struct stat info {};
+        return !stat(path.c_str(), &info) && (info.st_mode & S_IFREG);
+    }
     struct DirSmartDeleter
     {
         void operator()(DIR* dir)
