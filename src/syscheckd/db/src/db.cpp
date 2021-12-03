@@ -70,25 +70,11 @@ void fim_db_init(int storage,
 }
 
 void fim_run_integrity() {
-    fim_sync_queue = queue_init(syscheck.sync_queue_size);
-
-    FIMDBHelper::fimSyncStart<FIMDB>();
+    FIMDB::getInstance().fimRunIntegrity();
 }
 
 void fim_sync_push_msg(const char * msg) {
-
-    if (fim_sync_queue == NULL) {
-        mwarn("A data synchronization response was received before sending the first message.");
-        return;
-    }
-
-    char * copy;
-    os_strdup(msg, copy);
-
-    if (queue_push_ex(fim_sync_queue, copy) == -1) {
-        mdebug2("Cannot push a data synchronization message: queue is full.");
-        free(copy);
-    }
+    FIMDB::getInstance().fimSyncPushMsg(msg);
 }
 
 #ifdef __cplusplus
