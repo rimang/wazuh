@@ -21,8 +21,7 @@ void getRpmInfo(std::function<void(nlohmann::json&)> callback)
     if (!Utils::existsRegular(RPM_DATABASE)) {
         // We are probably using RPM >= 1.17 – get the packages from librpm.
         RPM rpm;
-        auto packages = rpm.packages();
-        for (const auto &p : packages)
+        for (const auto &p : rpm)
         {
            auto packageJson = PackageLinuxHelper::parseRpm(p);
             if (!packageJson.empty())

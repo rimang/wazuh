@@ -44,7 +44,6 @@ enum OSType
     WINDOWS
 };
 
-// RPM/DEB?
 enum LinuxType
 {
     STANDARD,

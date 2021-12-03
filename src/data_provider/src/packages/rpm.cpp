@@ -2,76 +2,42 @@
 
 #include <exception>
 #include <map>
-#include <memory>
 #include <stdexcept>
 #include <vector>
 
-#include <rpm/header.h>
-#include <rpm/rpmdb.h>
-#include <rpm/rpmlib.h>
-#include <rpm/rpmts.h>
-
 // For O_RDONLY
 #include <fcntl.h>
+
+#include <cassert>
 
 RPM::RPM()
 {
     static bool initialized = false;
     if (!initialized) {
-        //rpmInitCrypto();
+        rpmInitCrypto();
         rpmReadConfigFiles(nullptr, nullptr);
         initialized = true;
     }
 }
 
-RPM::~RPM()
-{
-
-}
-
-struct tdDeleter
-{
-    void operator()(rpmtd td)
-    {
-        rpmtdFree(td);
-    }
-};
-
-struct tsDeleter
-{
-    void operator()(rpmts ts)
-    {
-        rpmtsFree(ts);
-    }
-};
-struct iteratorDeleter
-{
-    void operator()(rpmdbMatchIterator it)
-    {
-        rpmdbFreeIterator(it);
-    }
-};
-
-using TagDataContainer = std::unique_ptr<rpmtd_s, tdDeleter>;
-using TransactionSet = std::unique_ptr<rpmts_s, tsDeleter>;
-using Iterator = std::unique_ptr<rpmdbMatchIterator_s, iteratorDeleter>;
-
-static std::string getAttribute(const Header &header, rpmTag tag, const TagDataContainer &td)
+std::string RPM::Iterator::getAttribute(rpmTag tag)
 {
     std::string str;
-    if (headerGet(header, tag, td.get(), HEADERGET_DEFAULT) == 0)
+    assert(m_dataContainer != nullptr);
+    assert(m_header != nullptr);
+    if (headerGet(m_header, tag, m_dataContainer, HEADERGET_DEFAULT) == 0)
     {
-        return str;
+        throw std::runtime_error("headerGet failed");
     }
 
     switch (rpmTagGetClass(tag))
     {
     case RPM_NUMERIC_CLASS:
-        str = std::to_string(rpmtdGetNumber(td.get()));
+        str = std::to_string(rpmtdGetNumber(m_dataContainer));
         break;
     case RPM_STRING_CLASS:
     {
-        auto cstr = rpmtdGetString(td.get());
+        auto cstr = rpmtdGetString(m_dataContainer);
         if (cstr)
         {
             str = cstr;
@@ -83,42 +49,70 @@ static std::string getAttribute(const Header &header, rpmTag tag, const TagDataC
     return str;
 }
 
+const RPM::Iterator RPM::END_ITERATOR{true};
 
-std::vector<RPM::Package> RPM::packages()
+RPM::Iterator::Iterator(bool end)
+: m_end{end}
 {
-    std::vector<RPM::Package> result;
-    TransactionSet transactionSet {rpmtsCreate()};
-    if (transactionSet.get() == nullptr)
-    {
-        throw std::runtime_error("rptsCreate failed");
+    if (end) {
+        return;
     }
-    if (rpmtsOpenDB(transactionSet.get(), O_RDONLY))
+    m_transactionSet = rpmtsCreate();
+    if (nullptr == m_transactionSet)
+    {
+        throw std::runtime_error("rpmtsCreate failed");
+    }
+    if (rpmtsOpenDB(m_transactionSet, O_RDONLY))
     {
         throw std::runtime_error("rptsOpenDB failed");
     }
-    if (rpmtsRun(transactionSet.get(), NULL, 0)) {
+    if (rpmtsRun(m_transactionSet, NULL, 0))
+    {
         throw std::runtime_error("rpmtsRun failed");
     }
-    Iterator matches{rpmtsInitIterator(transactionSet.get(), RPMTAG_NAME, nullptr, 0)};
-    Header h;
-    while ((h = rpmdbNextIterator(matches.get())) != nullptr)
+    m_dataContainer = rpmtdNew();
+    if (nullptr == m_dataContainer)
     {
-        TagDataContainer td{rpmtdNew()};
-        Package p;
-        p.name = getAttribute(h, RPMTAG_NAME, td);
-        p.version = getAttribute(h, RPMTAG_VERSION, td);
-        p.release = getAttribute(h, RPMTAG_RELEASE, td);
-        p.epoch = getAttribute(h, RPMTAG_EPOCH, td);
-        p.summary = getAttribute(h, RPMTAG_SUMMARY, td);
-        p.installTime = getAttribute(h, RPMTAG_INSTALLTIME, td);
-        p.size = getAttribute(h, RPMTAG_SIZE, td);
-        p.vendor = getAttribute(h, RPMTAG_VENDOR, td);
-        p.group = getAttribute(h, RPMTAG_GROUP, td);
-        p.source = getAttribute(h, RPMTAG_SOURCE, td);
-        p.architecture = getAttribute(h, RPMTAG_ARCH, td);
-        p.description = getAttribute(h, RPMTAG_DESCRIPTION, td);
-        result.push_back(std::move(p));
+        throw std::runtime_error("rpmtdNew failed");
     }
+    m_matches = rpmtsInitIterator(m_transactionSet, RPMTAG_NAME, nullptr, 0);
+    ++(*this);
+}
 
-    return result;
+RPM::Iterator::~Iterator()
+{
+    rpmtsFree(m_transactionSet);
+    if (m_dataContainer) {
+        rpmtdFree(m_dataContainer);
+    }
+    if (m_matches) {
+        rpmdbFreeIterator(m_matches);
+    }
+}
+
+void RPM::Iterator::operator++()
+{
+    m_header = rpmdbNextIterator(m_matches);
+    if (nullptr == m_header)
+    {
+        m_end = true;
+    }
+}
+
+RPM::Package RPM::Iterator::operator*()
+{
+    Package p;
+    p.name = getAttribute(RPMTAG_NAME);
+    p.version = getAttribute(RPMTAG_VERSION);
+    p.release = getAttribute(RPMTAG_RELEASE);
+    p.epoch = getAttribute(RPMTAG_EPOCH);
+    p.summary = getAttribute(RPMTAG_SUMMARY);
+    p.installTime = getAttribute(RPMTAG_INSTALLTIME);
+    p.size = getAttribute(RPMTAG_SIZE);
+    p.vendor = getAttribute(RPMTAG_VENDOR);
+    p.group = getAttribute(RPMTAG_GROUP);
+    p.source = getAttribute(RPMTAG_SOURCE);
+    p.architecture = getAttribute(RPMTAG_ARCH);
+    p.description = getAttribute(RPMTAG_DESCRIPTION);
+    return p;
 }
