@@ -8,7 +8,6 @@
 // For O_RDONLY
 #include <fcntl.h>
 
-#include <cassert>
 
 RPM::RPM()
 {
@@ -23,11 +22,9 @@ RPM::RPM()
 std::string RPM::Iterator::getAttribute(rpmTag tag)
 {
     std::string str;
-    assert(m_dataContainer != nullptr);
-    assert(m_header != nullptr);
     if (headerGet(m_header, tag, m_dataContainer, HEADERGET_DEFAULT) == 0)
     {
-        throw std::runtime_error("headerGet failed");
+        return "";
     }
 
     switch (rpmTagGetClass(tag))
