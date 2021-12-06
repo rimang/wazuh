@@ -21,29 +21,25 @@ RPM::RPM()
 
 std::string RPM::Iterator::getAttribute(rpmTag tag)
 {
-    std::string str;
     if (headerGet(m_header, tag, m_dataContainer, HEADERGET_DEFAULT) == 0)
     {
         return "";
     }
+    auto cstr = rpmtdGetString(m_dataContainer);
+    if (!cstr)
+    {
+        return "";
+    }
+    return cstr;
+}
 
-    switch (rpmTagGetClass(tag))
+uint64_t RPM::Iterator::getAttributeNumber(rpmTag tag)
+{
+    if (headerGet(m_header, tag, m_dataContainer, HEADERGET_DEFAULT) == 0)
     {
-    case RPM_NUMERIC_CLASS:
-        str = std::to_string(rpmtdGetNumber(m_dataContainer));
-        break;
-    case RPM_STRING_CLASS:
-    {
-        auto cstr = rpmtdGetString(m_dataContainer);
-        if (cstr)
-        {
-            str = cstr;
-        }
-        break;
+        return 0;
     }
-    default:;
-    }
-    return str;
+    return rpmtdGetNumber(m_dataContainer);
 }
 
 const RPM::Iterator RPM::END_ITERATOR{true};
@@ -105,7 +101,7 @@ RPM::Package RPM::Iterator::operator*()
     p.epoch = getAttribute(RPMTAG_EPOCH);
     p.summary = getAttribute(RPMTAG_SUMMARY);
     p.installTime = getAttribute(RPMTAG_INSTALLTIME);
-    p.size = getAttribute(RPMTAG_SIZE);
+    p.size = getAttributeNumber(RPMTAG_SIZE);
     p.vendor = getAttribute(RPMTAG_VENDOR);
     p.group = getAttribute(RPMTAG_GROUP);
     p.source = getAttribute(RPMTAG_SOURCE);

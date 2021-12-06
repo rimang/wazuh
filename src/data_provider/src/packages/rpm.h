@@ -23,7 +23,7 @@ public:
         std::string epoch;
         std::string summary;
         std::string installTime;
-        std::string size;
+        uint64_t size;
         std::string vendor;
         std::string group;
         std::string source;
@@ -42,6 +42,7 @@ public:
         };
     private:
         std::string getAttribute(rpmTag tag);
+        uint64_t getAttributeNumber(rpmTag tag);
         bool m_end = false;
         rpmts m_transactionSet = nullptr;
         rpmdbMatchIterator m_matches = nullptr;
