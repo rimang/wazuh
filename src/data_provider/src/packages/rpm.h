@@ -15,6 +15,7 @@ class RPM final
 {
 public:
     RPM();
+    ~RPM();
     struct Package
     {
         std::string name;

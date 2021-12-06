@@ -13,10 +13,13 @@ RPM::RPM()
 {
     static bool initialized = false;
     if (!initialized) {
-        rpmInitCrypto();
         rpmReadConfigFiles(nullptr, nullptr);
         initialized = true;
     }
+}
+
+RPM::~RPM() {
+    rpmFreeRpmrc();
 }
 
 std::string RPM::Iterator::getAttribute(rpmTag tag)
@@ -75,6 +78,7 @@ RPM::Iterator::Iterator(bool end)
 
 RPM::Iterator::~Iterator()
 {
+    rpmtsCloseDB(m_transactionSet);
     rpmtsFree(m_transactionSet);
     if (m_dataContainer) {
         rpmtdFree(m_dataContainer);
