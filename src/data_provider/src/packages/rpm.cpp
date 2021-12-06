@@ -69,6 +69,7 @@ RPM::Iterator::Iterator(bool end)
         throw std::runtime_error("rpmtdNew failed");
     }
     m_matches = rpmtsInitIterator(m_transactionSet, RPMTAG_NAME, nullptr, 0);
+    // Prepare for first call to dereference (*) operator.
     ++(*this);
 }
 

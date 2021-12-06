@@ -10,7 +10,7 @@
 #include <rpm/rpmlib.h>
 #include <rpm/rpmts.h>
 
-// Abstracts librpm functions.
+// Provides an iterable abstraction for retrieving installed RPM packages.
 class RPM final
 {
 public:
@@ -31,16 +31,16 @@ public:
         std::string description;
     };
 
-    struct Iterator {
-        Iterator(bool end = false);
-        virtual ~Iterator();
-        void operator++();
-        Package operator*();
+    struct Iterator final {
         bool operator!=(const Iterator &other)
         {
             return m_end != other.m_end;
         };
+        void operator++();
+        Package operator*();
+        ~Iterator();
     private:
+        Iterator(bool end = false);
         std::string getAttribute(rpmTag tag);
         uint64_t getAttributeNumber(rpmTag tag);
         bool m_end = false;
