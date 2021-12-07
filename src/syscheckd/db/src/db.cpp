@@ -69,6 +69,25 @@ void fim_db_init(int storage,
     }
 }
 
+TXN_HANDLE start_transaction(const char* table)
+{
+    return FIMDBHelper::startDBSyncTxn<FIMDB>(table).handle();
+}
+
+FIMDBErrorCodes sync_row_transaction(const fim_entry* entry) {
+    try
+    {
+        FIMDBHelper::TxnSyncRow(entry);
+    }
+    catch (...)
+    {
+        return FIMDB_ERR;
+
+    }
+    return FIMDB_OK;
+}
+
+
 #ifdef __cplusplus
 }
 #endif

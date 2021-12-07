@@ -9,6 +9,7 @@
 #ifndef FIMDB_H
 #define FIMDB_H
 #include "fimCommonDefs.h"
+#include "commonDefs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,6 +55,8 @@ void fim_db_init(int storage,
                  fim_sync_callback_t sync_callback,
                  logging_callback_t log_callback);
 #endif
+
+TXN_HANDLE fim_db_start_transaction(const char* table);
 
 #ifdef __cplusplus
 }

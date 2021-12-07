@@ -168,7 +168,7 @@ void FIMDB::executeQuery(const nlohmann::json& item, ResultCallbackData callback
 }
 
 
-DBSyncTxn FIMDB::startTxn(const std::string& table)
+DBSyncTxn FIMDB::startDBSyncTxn(const std::string& table)
 {
     const auto callback
     {
@@ -184,6 +184,7 @@ DBSyncTxn FIMDB::startTxn(const std::string& table)
         0,
         QUEUE_SIZE,
         callback
-    }
+    };
+
     return txn;
 }

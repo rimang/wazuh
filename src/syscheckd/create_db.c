@@ -138,8 +138,10 @@ time_t fim_scan() {
     cputime_start = clock();
     gettime(&start);
     minfo(FIM_FREQUENCY_STARTED);
-    fim_send_scan_info(FIM_SCAN_START);
 
+    TXN_HANDLE db_transaction_handle = fim_db_start_transaction(FIMDB_FILE_TABLENAME);
+
+    fim_send_scan_info(FIM_SCAN_START);
 
     fim_diff_folder_size();
     syscheck.disk_quota_full_msg = true;
@@ -160,7 +162,7 @@ time_t fim_scan() {
         event_data_t evt_data = { .mode = FIM_SCHEDULED, .report_event = true, .w_evt = NULL };
         char *path = fim_get_real_path(dir_it);
 
-        fim_checker(path, &evt_data, dir_it);
+        fim_checker(path, &evt_data, dir_it, db_transaction_handle);
 
 #ifndef WIN32
         realtime_adddir(path, dir_it);
@@ -257,7 +259,11 @@ time_t fim_scan() {
     return end_of_scan;
 }
 
-void fim_checker(const char *path, event_data_t *evt_data, const directory_t *parent_configuration) {
+void fim_checker(const char *path,
+                 event_data_t *evt_data,
+                 const directory_t *parent_configuration,
+                 TXN_HANDLE dbsync_txn) {
+
     directory_t *configuration;
     int depth;
     fim_entry *saved_entry = NULL;

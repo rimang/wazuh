@@ -13,6 +13,7 @@
 #define _FIMDBHELPER_HPP
 #include "fimDB.hpp"
 #include "dbItem.hpp"
+#include "commonDefs.h"
 
 namespace FIMDBHelper
 {
@@ -222,8 +223,8 @@ namespace FIMDBHelper
     }
 
     template<typename T>
-    void startDBSyncTxn() {
-        auto T::getInstance().
+    DBSyncTxn startDBSyncTxn(const std::string& table) {
+        return T::getInstance().startDBSyncTxn(table);
     }
 }
 
